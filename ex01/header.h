@@ -16,6 +16,17 @@
 # include <mpi.h>
 # include <stdio.h>
 # include <stdlib.h>
+# include <stdint.h>
+
+// ############################ BENCHMARK TYPES ############################### //
+
+typedef struct s_bench_record {
+	char	program[32];
+	uint64_t exec_time_ns;
+	long double sum_result;
+	long long N;
+	int		num_procs;
+} bench_record;
 
 // ################################ UTILS PROTOTYPES ############################# //
 
@@ -77,5 +88,13 @@ float omp_sum(int global_start, int global_stop);
  *  
  */
 float sum_formula(int n);
+
+// ############################ BENCHMARK UTILS PROTOTYPES ############################### //
+
+void	usage_controller(void);
+void	usage_worker(void);
+long long parse_positive(const char *arg, const char *name);
+int	 run_mpi_worker(long long N);
+int	 controller_main(long long max_n, long long step, const char *csv_path);
 
 #endif

@@ -2,7 +2,7 @@ CC      := mpicc
 CFLAGS  := -std=c99 -O3 -march=native -Wall -Wextra -pedantic -fopenmp
 DEPFLAGS:= -MMD -MP
 
-SRC := main.c mpi_sum.c omp_sum.c utils.c
+SRC := main.c benchmark_utils.c mpi_sum.c omp_sum.c utils.c
 OBJ := $(SRC:.c=.o)
 DEP := $(OBJ:.o=.d)
 
