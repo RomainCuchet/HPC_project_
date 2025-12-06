@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "header.h"
+#include <omp.h>
 
 long double ft_sum(size_t start, size_t end)
 {
@@ -27,12 +28,18 @@ long double ft_sum(size_t start, size_t end)
     return sum;
 }
 
-void ft_display_info(size_t number_of_slice, long double global_sum)
-{
-    printf("\n========================================\n");
-    printf("N = %zu\n", number_of_slice);
-    printf("Computed sum  : %.33Lf\n", global_sum);
-    printf("Expected sum  : %.33Lf\n",
-        (long double)number_of_slice / (1.0L + (long double)number_of_slice));
-    printf("========================================\n");
+float sum_iteratif(int start_i, int stop_i){
+    float sum = 0;
+    if(start_i<0 || stop_i<start_i){
+        return -1;
+    }
+    for(int i=start_i; i<=stop_i;i++){
+        sum += 1.0f/(i*(i+1.0f));
+    }
+    return sum;
+}
+
+
+float sum_formula(int n){
+    return 1.0f-1.0f/(n+1);
 }

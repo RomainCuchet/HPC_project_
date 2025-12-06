@@ -1,59 +1,22 @@
-# **************************************************************************** #
-#                                                                              #
-#                                                         :::      ::::::::    #
-#    Makefile                                           :+:      :+:    :+:    #
-#                                                     +:+ +:+         +:+      #
-#    By: aurele <aurele@student.42.fr>              +#+  +:+       +#+         #
-#                                                 +#+#+#+#+#+   +#+            #
-#    Created: 2025/11/17 17:45:19 by aurele            #+#    #+#              #
-#    Updated: 2025/11/24 14:43:22 by aurele           ###   ########.fr        #
-#                                                                              #
-# **************************************************************************** #
+CC      := mpicc
+CFLAGS  := -std=c99 -O3 -march=native -Wall -Wextra -pedantic -fopenmp
+DEPFLAGS:= -MMD -MP
 
-CFILES=main.c utils.c
-OFILES=$(CFILES:.c=.o)
-CC=mpicc
-CFLAGS= -Wall -Wextra -Werror
-Q=@
-NAME=prog
-NPROC=5
-N=1000000000
-#default we set N= 1000000000
-EXEC=mpirun
-all : $(NAME)
+SRC := main.c mpi_sum.c omp_sum.c utils.c
+OBJ := $(SRC:.c=.o)
+DEP := $(OBJ:.o=.d)
 
-$(NAME): $(OFILES)
-	$(Q)$(CC) $^ -o $(NAME)
+all: benchmark
 
-%.o:%.c
-	$(Q)$(CC) -c $< -o $@
+benchmark: $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $^
+
+%.o: %.c header.h
+	$(CC) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 
 clean:
-	$(Q)rm -f $(OFILES)
+	rm -f benchmark $(OBJ) $(DEP)
 
-fclean:clean
-	$(Q)rm -f $(NAME)
+.PHONY: all clean
 
-re: fclean all
-
-exec: $(NAME)
-	$(Q)$(EXEC) -n $(NPROC)  ./$(NAME) $(N)
-
-.PHONY: all clean fclean re exec run info
-
-run: $(NAME)
-	$(Q)$(EXEC) -n $(NPROC)  ./$(NAME) $(N)
-	$(Q)rm -f $(OFILES) $(NAME)
-
-info:
-	@echo "default variables :"
-	@echo "  NPROC = $(NPROC)"
-	@echo "  N     = $(N)"
-	@echo ""
-	@echo "Commandes :"
-	@echo "  all, clean, fclean, re, exec, run"
-	@echo ""
-	@echo "Usage :"
-	@echo "  make run NPROC=4 N=1000"
-
-
+-include $(DEP)
