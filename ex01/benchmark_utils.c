@@ -66,12 +66,12 @@ static void csv_write_header(FILE *fp)
 static void csv_append(FILE *fp, const bench_record *rec)
 {
     fprintf(fp, "%s,%" PRIu64 ",%.10Lf,%lld,%d\n",
-        rec->program, rec->exec_time_ns, rec->sum_result, rec->N, rec->num_procs);
+            rec->program, rec->exec_time_ns, rec->sum_result, rec->N, rec->num_procs);
     fflush(fp);
 }
 
 static void record_and_write(FILE *fp, const char *program, uint64_t duration,
-                  long double sum, long long N, int procs)
+                             long double sum, long long N, int procs)
 {
     bench_record rec;
     memset(&rec, 0, sizeof(rec));
@@ -85,7 +85,6 @@ static void record_and_write(FILE *fp, const char *program, uint64_t duration,
 
 static int run_command_capture(const char *cmd, long double *sum_out, uint64_t *duration_ns)
 {
-    uint64_t start = now_ns();
     FILE *pipe = popen(cmd, "r");
     if (!pipe)
     {
@@ -110,10 +109,29 @@ static int run_command_capture(const char *cmd, long double *sum_out, uint64_t *
         return -1;
     }
 
-    int status = pclose(pipe);
-    uint64_t elapsed = now_ns() - start;
+    uint64_t parsed_duration = 0;
     if (duration_ns)
-        *duration_ns = elapsed;
+    {
+        while (*end == ' ' || *end == '\t')
+            ++end;
+        if (*end == '\0')
+        {
+            fprintf(stderr, "Missing duration from '%s'\n", cmd);
+            pclose(pipe);
+            return -1;
+        }
+        char *end_dur = NULL;
+        unsigned long long tmp = strtoull(end, &end_dur, 10);
+        if (end_dur == end)
+        {
+            fprintf(stderr, "Unable to parse duration from '%s'\n", cmd);
+            pclose(pipe);
+            return -1;
+        }
+        parsed_duration = (uint64_t)tmp;
+    }
+
+    int status = pclose(pipe);
     if (status == -1 || !WIFEXITED(status) || WEXITSTATUS(status) != 0)
     {
         fprintf(stderr, "Command '%s' failed (status=%d)\n", cmd, status);
@@ -121,6 +139,8 @@ static int run_command_capture(const char *cmd, long double *sum_out, uint64_t *
     }
     if (sum_out)
         *sum_out = parsed;
+    if (duration_ns)
+        *duration_ns = parsed_duration;
     return 0;
 }
 
@@ -157,9 +177,14 @@ int run_mpi_worker(long long N)
     int rank = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    double t0 = MPI_Wtime();
     float result = mpi_sum((size_t)N);
+    double t1 = MPI_Wtime();
+    uint64_t duration_ns = (uint64_t)((t1 - t0) * 1e9);
+
     if (rank == 0)
-        printf("%.10f\n", result);
+        printf("%.10f %" PRIu64 "\n", result, duration_ns);
 
     MPI_Finalize();
     return EXIT_SUCCESS;
@@ -200,15 +225,15 @@ int controller_main(long long max_n, long long step, const char *csv_path)
         for (int p = 1; p <= max_mpi; ++p)
         {
             snprintf(cmd, sizeof(cmd),
-                 "mpirun -np %d ./benchmark --mpi-worker %lld",
-                 p, N);
+                     "mpirun -np %d ./benchmark --mpi-worker %lld",
+                     p, N);
             uint64_t duration = 0;
             long double mpi_result = 0.0L;
             if (run_command_capture(cmd, &mpi_result, &duration) != 0)
             {
                 fprintf(stderr,
-                     "MPI benchmark failed for N=%lld, procs=%d\n",
-                     N, p);
+                        "MPI benchmark failed for N=%lld, procs=%d\n",
+                        N, p);
                 fclose(csv);
                 return EXIT_FAILURE;
             }
